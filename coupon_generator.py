@@ -69,33 +69,35 @@ def get_resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-def generate_barcode_image(data, size=(500, 145), bar_color="white", bg_color=(0, 255, 0, 255), transparent=False):
-    # Create barcode in memory
+def generate_barcode_image(data, size=(465, 126), bar_color="white", bg_color="white", transparent=False):
+    # Generate barcode and write to in-memory buffer
     code128 = barcode.get("code128", data, writer=ImageWriter())
     buffer = io.BytesIO()
     code128.write(buffer, {"module_height": 15, "write_text": False})
     buffer.seek(0)
-    
-    # Open with PIL
-    barcode_img = Image.open(buffer).convert("RGBA")
 
-    # Resize
+    # Load barcode image from buffer
+    barcode_img = Image.open(buffer).convert("RGBA")
     barcode_img = barcode_img.resize(size, Image.Resampling.LANCZOS)
 
-    # Recolor
+    # Convert colors
+    bar_rgb = ImageColor.getrgb(bar_color)
+    if not transparent:
+        bg_rgb = ImageColor.getrgb(bg_color)
+
+    # Recolor the barcode
     datas = barcode_img.getdata()
     new_data = []
     for item in datas:
         if item[0] < 128:  # black bar
-            new_data.append((*ImageColor.getrgb(bar_color), 255))
+            new_data.append((*bar_rgb, 255))
         else:  # white background
             if transparent:
                 new_data.append((255, 255, 255, 0))
             else:
-                new_data.append(bg_color)
+                new_data.append((*bg_rgb, 255))
     barcode_img.putdata(new_data)
 
-    # Rotate to vertical
     return barcode_img.rotate(90, expand=True)
 
 def main():
@@ -117,14 +119,14 @@ def main():
         # Generate barcode image
         barcode_img = generate_barcode_image(
             data,
-            size=(500, 145),
-            bar_color="white",
-            bg_color=(0, 0, 0, 0),
-            transparent=True
+            size=(465, 126),
+            bar_color="#044375",
+            bg_color="#ffffff",
+            transparent=False
         )
 
         # Position barcode on the coupon
-        position = (255, 79)  # X, Y pixel coordinates
+        position = (265, 97)  # X, Y pixel coordinates
         background.paste(barcode_img, position, barcode_img)
 
         # Ask where to save
